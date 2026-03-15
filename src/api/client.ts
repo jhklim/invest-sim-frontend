@@ -2,7 +2,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: `${import.meta.env.VITE_API_BASE_URL ?? ''}/api`,
 })
 
 apiClient.interceptors.request.use((config) => {
@@ -29,7 +29,7 @@ apiClient.interceptors.response.use(
 
       if (memberId && refreshToken) {
         try {
-          const { data } = await axios.post('/api/auth/refresh', {
+          const { data } = await axios.post(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/auth/refresh`, {
             memberId: Number(memberId),
             refreshToken,
           })
