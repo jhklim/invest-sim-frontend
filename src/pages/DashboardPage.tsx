@@ -1,30 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getStrategies } from '@/api/strategies'
 import { getTrades, type TradeResponse } from '@/api/trades'
+import { getMarketPrice } from '@/api/market'
 import { TrendingUp, TrendingDown, Activity, LineChart, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
-let currentBtcPrice = 68145.32
-
-function getBtcPrice(): number {
-  const change = currentBtcPrice * (Math.random() * 0.01 - 0.005)
-  currentBtcPrice = Math.round((currentBtcPrice + change) * 100) / 100
-  return currentBtcPrice
+function formatKRW(value: number): string {
+  return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(value)
 }
 
 export default function DashboardPage() {
-  const [btcPrice, setBtcPrice] = useState(68145.32)
+  const [btcPrice, setBtcPrice] = useState<number | null>(null)
   const [priceChange, setPriceChange] = useState(0)
-  const [prevPrice, setPrevPrice] = useState(68145.32)
+  const prevPriceRef = useRef<number | null>(null)
   const [activeStrategies, setActiveStrategies] = useState(0)
   const [totalStrategies, setTotalStrategies] = useState(0)
   const [trades, setTrades] = useState<TradeResponse[]>([])
@@ -38,14 +26,22 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const newPrice = getBtcPrice()
-      setPriceChange(newPrice - prevPrice)
-      setPrevPrice(btcPrice)
-      setBtcPrice(newPrice)
-    }, 3000)
+    const fetchPrice = async () => {
+      try {
+        const { data } = await getMarketPrice('KRW-BTC')
+        const newPrice = data.price
+        setPriceChange(prevPriceRef.current !== null ? newPrice - prevPriceRef.current : 0)
+        prevPriceRef.current = newPrice
+        setBtcPrice(newPrice)
+      } catch {
+        // 에러 시 이전 값 유지
+      }
+    }
+
+    fetchPrice()
+    const interval = setInterval(fetchPrice, 2000)
     return () => clearInterval(interval)
-  }, [btcPrice, prevPrice])
+  }, [])
 
   const openTrades = trades.filter((t) => t.positionStatus === 'OPEN')
   const totalProfitLoss = trades.reduce((sum, t) => sum + (t.profitAmount ?? 0), 0)
@@ -61,16 +57,18 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">BTC Price</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">BTC 현재가</CardTitle>
             <div className={isPositiveChange ? 'text-success' : 'text-destructive'}>
               {isPositiveChange ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(btcPrice)}</div>
+            <div className="text-2xl font-bold text-foreground">
+              {btcPrice !== null ? formatKRW(btcPrice) : '-'}
+            </div>
             <div className={`flex items-center gap-1 text-sm mt-1 ${isPositiveChange ? 'text-success' : 'text-destructive'}`}>
               {isPositiveChange ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-              <span>{formatCurrency(Math.abs(priceChange))}</span>
+              <span>{priceChange !== 0 ? formatKRW(Math.abs(priceChange)) : '-'}</span>
             </div>
           </CardContent>
         </Card>
@@ -105,7 +103,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className={`text-4xl font-bold ${totalProfitLoss >= 0 ? 'text-success' : 'text-destructive'}`}>
-            {totalProfitLoss >= 0 ? '+' : ''}{formatCurrency(totalProfitLoss)}
+            {totalProfitLoss >= 0 ? '+' : ''}{formatKRW(totalProfitLoss)}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div>
