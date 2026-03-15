@@ -18,6 +18,7 @@ interface Props {
 }
 
 const EXCHANGES = ['UPBIT']
+const MARKETS = ['KRW-BTC']
 const INDICATORS = ['RSI', 'VOLUME']
 
 const defaultCondition = (): Condition => ({ indicator: 'RSI', indicatorValue: '' })
@@ -150,12 +151,18 @@ export function CreateStrategyModal({ open, onOpenChange, onCreated }: Props) {
                 <label className="text-sm font-medium text-foreground mb-1.5 block">
                   마켓 <span className="text-destructive">*</span>
                 </label>
-                <Input
-                  placeholder="KRW-BTC"
+                <select
                   value={market}
                   onChange={(e) => setMarket(e.target.value)}
-                  required
-                />
+                  className={cn(
+                    'w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground',
+                    'focus:outline-none focus:border-ring focus:ring-ring/50 focus:ring-[3px]',
+                  )}
+                >
+                  {MARKETS.map((m) => (
+                    <option key={m} value={m} className="bg-card">{m}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div>
